@@ -36,6 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %{
   open Context
   open Declarator
+  open Printf
 %}
 
 %token<string> NAME
@@ -243,9 +244,9 @@ typedef_name_spec:
     {}
 
 general_identifier:
-| i = typedef_name
+| i = typedef_name {printf "general_identifier(typedef_name)\n"; i}
 | i = var_name
-    { i }
+    { printf "general_identifier(var_name)\n"; i }
 
 save_context:
 | (* empty *)
@@ -261,7 +262,7 @@ scoped(X):
 
 declarator_varname:
 | d = declarator
-    { declare_varname (identifier d); d }
+    { printf "declarator_varname(%s)\n" (identifier d); declare_varname (identifier d); d }
 
 declarator_typedefname:
 | d = declarator
@@ -427,9 +428,9 @@ assignment_operator:
     {}
 
 expression:
-| assignment_expression
+| assignment_expression {printf "expression(assignment_expression)\n"}
 | expression "," assignment_expression
-    {}
+    {printf "expression(expression, assignment_expression)\n"}
 
 
 constant_expression:
@@ -442,10 +443,9 @@ constant_expression:
    the context. *)
 
 declaration:
-| declaration_specifiers         init_declarator_list(declarator_varname)?     ";"
-| declaration_specifiers_typedef init_declarator_list(declarator_typedefname)? ";"
-| static_assert_declaration
-    {}
+| declaration_specifiers         init_declarator_list(declarator_varname)?     ";" {printf "declaration(not typedef)\n"}
+| declaration_specifiers_typedef init_declarator_list(declarator_typedefname)? ";" {printf "declaration(typedef)\n"}
+| static_assert_declaration {printf "declaration(static_assert_declaration)\n"}
 
 (* [declaration_specifier] corresponds to one declaration specifier in the C18
    standard, deprived of "typedef" and of type specifiers. *)
@@ -476,9 +476,9 @@ declaration_specifier:
    [declaration_specifiers] forbids the ["typedef"] keyword. *)
 
 declaration_specifiers:
-| list_eq1(type_specifier_unique,    declaration_specifier)
+| list_eq1(type_specifier_unique,    declaration_specifier) {printf "declaration_specifiers(type_specifier_unique)\n"}
 | list_ge1(type_specifier_nonunique, declaration_specifier)
-    {}
+    {printf "declaration_specifiers(type_specifier_nonunique)\n"}
 
 (* [declaration_specifiers_typedef] is analogous to [declaration_specifiers],
    but requires the ["typedef"] keyword to be present (exactly once). *)
@@ -505,37 +505,35 @@ init_declarator(declarator):
    C18 standard, deprived of ["typedef"] (which receives special treatment). *)
 
 storage_class_specifier:
-| "extern"
-| "static"
-| "_Thread_local"
-| "auto"
-| "register"
-    {}
+| "extern" {printf "storage_class_specifier(extern)\n"}
+| "static" {printf "storage_class_specifier(static)\n"}
+| "_Thread_local" {printf "storage_class_specifier(_Thread_local)\n"}
+| "auto" {printf "storage_class_specifier(auto)\n"}
+| "register" {printf "storage_class_specifier(register)\n"}
 
 (* A type specifier which can appear together with other type specifiers. *)
 
 type_specifier_nonunique:
-| "char"
-| "short"
-| "int"
-| "long"
-| "float"
-| "double"
-| "signed"
-| "unsigned"
-| "_Complex"
-    {}
+| "char" {printf "type_specifier_nonunique(char)\n"}
+| "short" {printf "type_specifier_nonunique(short)\n"}
+| "int" {printf "type_specifier_nonunique(int)\n"}
+| "long" {printf "type_specifier_nonunique(long)\n"}
+| "float" {printf "type_specifier_nonunique(float)\n"}
+| "double" {printf "type_specifier_nonunique(double)\n"}
+| "signed" {printf "type_specifier_nonunique(signed)\n"}
+| "unsigned" {printf "type_specifier_nonunique(unsigned)\n"}
+| "_Complex" {printf "type_specifier_nonunique(_Complex)\n"}
 
 (* A type specifier which cannot appear together with other type specifiers. *)
 
 type_specifier_unique:
-| "void"
-| "_Bool"
-| atomic_type_specifier
-| struct_or_union_specifier
-| enum_specifier
+| "void" {printf "type_specifier_unique(void)\n"}
+| "_Bool" {printf "type_specifier_unique(_Bool)\n"}
+| atomic_type_specifier {printf "type_specifier_unique(atomic_type_specifier)\n"}
+| struct_or_union_specifier {printf "type_specifier_unique(struct_or_union_specifier)\n"}
+| enum_specifier {printf "type_specifier_unique(enum_specifier)\n"}
 | typedef_name_spec
-    {}
+    {printf "type_specifier_unique(typedef_name_spec)\n"}
 
 struct_or_union_specifier:
 | struct_or_union general_identifier? "{" struct_declaration_list "}"
@@ -562,9 +560,9 @@ struct_declaration:
    same constraint as [declaration_specifiers] (see above). *)
 
 specifier_qualifier_list:
-| list_eq1(type_specifier_unique,    type_qualifier | alignment_specifier {})
+| list_eq1(type_specifier_unique,    type_qualifier | alignment_specifier {}) {printf "specifier_qualifier_list(type_specifier_unique)\n"}
 | list_ge1(type_specifier_nonunique, type_qualifier | alignment_specifier {})
-    {}
+    {printf "specifier_qualifier_list(type_specifier_nonunique)\n"}
 
 struct_declarator_list:
 | struct_declarator
@@ -618,7 +616,7 @@ alignment_specifier:
 
 declarator:
 | ioption(pointer) d = direct_declarator
-    { other_declarator d }
+    { printf "declarator %s\n" (identifier d); other_declarator d }
 
 (* The occurrences of [save_context] inside [direct_declarator] and
    [direct_abstract_declarator] seem to serve no purpose. In fact, they are
@@ -628,18 +626,18 @@ declarator:
 
 direct_declarator:
 | i = general_identifier
-    { identifier_declarator i }
+    { printf "direct_declarator(general_identifier)\n"; identifier_declarator i }
 | "(" save_context d = declarator ")"
     { d }
-| d = direct_declarator "[" type_qualifier_list? assignment_expression? "]"
+| d = direct_declarator "[" type_qualifier_list? assignment_expression? "]" {printf "direct_declarator([type_qualifier_list? assignment_expression?])\n"; other_declarator d}
 | d = direct_declarator "[" "static" type_qualifier_list? assignment_expression "]"
 | d = direct_declarator "[" type_qualifier_list "static" assignment_expression "]"
 | d = direct_declarator "[" type_qualifier_list? "*" "]"
     { other_declarator d }
 | d = direct_declarator "(" ctx = scoped(parameter_type_list) ")"
-    { function_declarator d ctx }
+    { printf "direct_declarator(function_declarator)\n"; function_declarator d ctx }
 | d = direct_declarator "(" save_context identifier_list? ")"
-    { other_declarator d }
+    { printf "direct_declarator(other_declarator)\n"; other_declarator d }
 
 pointer:
 | "*" type_qualifier_list? pointer?
@@ -659,9 +657,9 @@ parameter_list:
     {}
 
 parameter_declaration:
-| declaration_specifiers declarator_varname
+| declaration_specifiers declarator_varname {printf "fuck1\n"}
 | declaration_specifiers abstract_declarator?
-    {}
+    {printf "fuck2\n"}
 
 identifier_list:
 | var_name
@@ -716,7 +714,7 @@ static_assert_declaration:
 statement:
 | labeled_statement
 | scoped(compound_statement)
-| expression_statement
+| expression_statement {printf "statement(expression_statement)\n";}
 | scoped(selection_statement)
 | scoped(iteration_statement)
 | jump_statement
@@ -730,16 +728,15 @@ labeled_statement:
 
 compound_statement:
 | "{" block_item_list? "}"
-    {}
+    {printf "compound_statement\n"}
 
 block_item_list:
 | block_item_list? block_item
     {}
 
 block_item:
-| declaration
-| statement
-    {}
+| declaration {printf "block_item(declaration)\n"}
+| statement {printf "block_item(statement)\n"}
 
 expression_statement:
 | expression? ";"
@@ -771,9 +768,9 @@ translation_unit_file:
     {}
 
 external_declaration:
-| function_definition
+| function_definition {printf "external_declaration(function_definition)\n";}
 | declaration
-    {}
+    {printf "external_declaration(declaration)\n";}
 
 function_definition1:
 | declaration_specifiers d = declarator_varname

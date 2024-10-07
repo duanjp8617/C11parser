@@ -332,7 +332,16 @@ and singleline_comment = parse
 
       | SIdent id ->
           st := SRegular;
-          if is_typedefname id then TYPE else VARIABLE
+          if is_typedefname id then 
+            begin 
+              Printf.printf "find id(%s) from the set, it's a typedef name\n" id;
+              TYPE  
+            end 
+          else 
+            begin
+              Printf.printf "can't find id(%s) from the set, it's a var name\n" id;
+              VARIABLE
+            end
 
       | SAtomic
       | SRegular ->
